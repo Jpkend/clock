@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Clock, Stopwatch, Countdown & Exam Clock App</title>
+  <style>
+    /* Reset and full-screen container */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #f0f0f0;
+      font-family: Arial, sans-serif;
+      position: relative;
+    }
+    
+    /* Dropdown menu in top left */
+    #clock-selector {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 50;
+      padding: 5px;
+      font-size: 16px;
+    }
+    
+    /* Fullscreen button in top right */
+    #fullscreen-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 50;
+      padding: 5px 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    /* Main clock container (for analogue, digital, stopwatch, countdown) */
+    #clock-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90vmin;
+      height: 90vmin;
+    }
+    
+    /* ------------------ */
+    /* Analogue Clock CSS */
+    /* ------------------ */
+    #analogue {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
+    #clockface {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Generic hand styling */
+    .hand {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 50% 100%;  /* Pivot at bottom center */
+    }
+    
+    /* Pointed hands for hour, minute, second using clip-path */
+    #hour, #minute, #second {
+      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    }
+    
+    /* Hand customizations for analogue */
+    #hour {
+      width: 4%;
+      height: 25%;
+      background: #000;
+    }
+    
+    #minute {
+      width: 3%;
+      height: 35%;
+      background: #333;
+    }
+    
+    #second {
+      width: 2%;
+      height: 40%;
+      background: #d23a37;
+      border-radius: 1px;
+    }
+    
+    /* ------------------ */
+    /* Digital Clock CSS */
+    /* ------------------ */
+    #digital {
+      display: none; /* Hidden by default */
+      width: 100%;
+      height: 100%;
+      justify-content: center;
+      align-items: center;
+      font-size: 25vmin;
+      background: none;
+      border: none;
+      display: flex;
+      color: #2a2a59;
+    }
+    
+    /* ------------------ */
+    /* Stopwatch CSS */
+    /* ------------------ */
+    #stopwatch {
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #2a2a59;
+    }
+    
+    /* Initial stopwatch display in MM:SS:MS (2-digit ms) */
+    #stopwatch-display {
+      font-size: 25vmin;
+      margin-bottom: 20px;
+    }
+    
+    #stopwatch-controls button {
+      font-size: 2vmin;
+      padding: 10px 20px;
+      margin: 0 10px;
+      cursor: pointer;
+    }
+    
+    /* ------------------ */
+    /* Countdown Timer CSS (HH:MM:SS format) */
+    /* ------------------ */
+    #countdown {
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #2a2a59;
+    }
+    
+    /* Countdown display is contentEditable for inline editing.
+       New Format: HH:MM:SS */
+    #countdown-display {
+      font-size: 25vmin;
+      margin-bottom: 20px;
+      outline: none;
+      text-align: center;
+      cursor: text;
+    }
+    
+    #countdown-controls button {
+      font-size: 2vmin;
+      padding: 10px 20px;
+      margin: 0 10px;
+      cursor: pointer;
+    }
+    
+    /* ------------------ */
+    /* Exam Clock CSS */
+    /* ------------------ */
+    #exam {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* Use flex to split screen: left 70% for clock, right 30% for options */
+      display: flex;
+    }
+    
+    #exam-clock {
+      flex: 7;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    /* Use a smaller analogue clock for exam mode */
+    #exam-clock img {
+      width: 65%;
+      height: auto;
+    }
+    
+    /* Reuse hand styling for exam clock */
+    .exam-hand {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 50% 100%;
+    }
+    
+    /* Exam clock hands (can be scaled as needed) */
+    #exam-hour, #exam-minute, #exam-second {
+      clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    }
+    
+    #exam-hour {
+      width: 2.5%;
+      height: 20%;
+      background: #000;
+    }
+    
+    #exam-minute {
+      width: 2%;
+      height: 25%;
+      background: #333;
+    }
+    
+    #exam-second {
+      width: 1.5%;
+      height: 30%;
+      background: #d23a37;
+      border-radius: 1px;
+    }
+    
+    /* Center circle for exam clock */
+    #exam-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      background: #000;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    
+    #exam-options {
+      flex: 3;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      background: #2a2a59;
+      border-left: 2px solid #ccc;
+      font-size: 5vmin;
+      color: #ccc;
+    }
+    
+    #exam-options label {
+      margin-bottom: 20px;
+      display: block;
+      white-space: nowrap;
+    }
+    
+    /* Styling for select and input elements in exam options */
+    #exam-options select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background: none;
+      border: none;
+      outline: none;
+      padding: 5px;
+      font-size: 5vmin;
+      cursor: pointer;
+      color: #d23a37;
+    }
+    
+    #exam-options input[type="text"] {
+      display: inline-block;
+      background: none;
+      border: none;
+      outline: none;
+      font-size: 5vmin;
+      padding: 5px;
+      color: #d23a37;
+    }
+    
+    #exam-options .heading {
+      color: #ccc;
+    }
+    
+    #exam-options .response {
+      color: #d23a37;
+    }
+    
+    /* ------------------ */
+    /* Center Circle for Analogue (regular mode) */
+    /* ------------------ */
+    #center {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: #000;
+      border-radius: 50%;
+      z-index: 40;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Dropdown for clock type selection (top left) -->
+  <select id="clock-selector">
+    <option value="analogue" selected>Analogue</option>
+    <option value="digital">Digital</option>
+    <option value="stopwatch">Stopwatch</option>
+    <option value="countdown">Countdown Timer</option>
+    <option value="exam">Exam Clock</option>
+  </select>
+  
+  <!-- Fullscreen button (top right) -->
+  <button id="fullscreen-btn">Full Screen</button>
+  
+  <!-- Main container for analogue, digital, stopwatch, countdown -->
+  <div id="clock-container">
+    <!-- Analogue clock -->
+    <div id="analogue">
+      <img id="clockface" src="clockface.svg" alt="Clock Face">
+      <div id="hour" class="hand"></div>
+      <div id="minute" class="hand"></div>
+      <div id="second" class="hand"></div>
+    </div>
+    
+    <!-- Digital clock -->
+    <div id="digital"></div>
+    
+    <!-- Stopwatch -->
+    <div id="stopwatch">
+      <div id="stopwatch-display">00:00:00</div>
+      <div id="stopwatch-controls">
+        <button id="stopwatch-start">Start</button>
+        <button id="stopwatch-reset">Reset</button>
+      </div>
+    </div>
+    
+    <!-- Countdown Timer (HH:MM:SS format) -->
+    <div id="countdown">
+      <div id="countdown-display" contenteditable="true">00:00:00</div>
+      <div id="countdown-controls">
+        <button id="countdown-start">Start</button>
+        <button id="countdown-reset">Reset</button>
+        <!-- Sound toggle button -->
+        <button id="countdown-sound-toggle">Sound: On</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Exam Clock Mode Container -->
+  <div id="exam">
+    <!-- Left: Exam Clock -->
+    <div id="exam-clock">
+      <img id="exam-clockface" src="clockface.svg" alt="Exam Clock Face">
+      <div id="exam-hour" class="exam-hand"></div>
+      <div id="exam-minute" class="exam-hand"></div>
+      <div id="exam-second" class="exam-hand"></div>
+      <div id="exam-center"></div>
+    </div>
+    
+    <!-- Right: Exam Options -->
+    <div id="exam-options">
+      <label>
+        Level:
+        <select id="exam-level">
+          <option>Elementary</option>
+          <option>Pre-Intermediate</option>
+          <option>Intermediate</option>
+          <option>Upper Intermediate</option>
+          <option>Pre-Advanced</option>
+          <option>Advanced</option>
+        </select>
+      </label>
+
+      <label>
+        Exam:
+        <select id="exam-type">
+          <option>Reading</option>
+          <option>Listening</option>
+          <option>Writing</option>
+        </select>
+      </label>
+
+      <label>
+        <span class="heading">Time:</span> <span class="response" id="exam-time">--</span> <span class="response">minutes</span>
+      </label>      
+     
+      <label>
+        <span class="heading">Start:</span>
+        <input type="text" id="exam-start" placeholder="HH:MM">
+      </label>
+      <label>
+        <span class="heading">Finish:</span> <span class="response" id="exam-finish">--</span>
+      </label>
+    </div>
+  </div>
+  
+  <!-- Center circle for Analogue (regular mode) -->
+  <div id="center"></div>
+  
+  <!-- Audio element for countdown sound -->
+  <audio id="countdown-sound" src="countdown.mp3"></audio>
+  
+  <script>
+    // ----------------------
+    // Fullscreen Toggle Functionality
+    // ----------------------
+    document.getElementById('fullscreen-btn').addEventListener('click', function() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          alert(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    });
+    
+    // ----------------------
+    // Sound Toggle for Countdown Timer
+    // ----------------------
+    let countdownSoundOn = true;
+    document.getElementById('countdown-sound-toggle').addEventListener('click', function() {
+      countdownSoundOn = !countdownSoundOn;
+      this.textContent = countdownSoundOn ? "Sound: On" : "Sound: Off";
+    });
+    
+    // ----------------------
+    // Exam Durations Lookup
+    // ----------------------
+    const examDurations = {
+      "Elementary": {
+        "Reading": 30,
+        "Listening": 20,
+        "Writing": 50
+      },
+      "Pre-Intermediate": {
+        "Reading": 60,
+        "Listening": 35,
+        "Writing": 60
+      },
+      "Intermediate": {
+        "Reading": 75,
+        "Listening": 40,
+        "Writing": 60
+      },
+      "Upper Intermediate": {
+        "Reading": 75,
+        "Listening": 45,
+        "Writing": 75
+      },
+      "Pre-Advanced": {
+        "Reading": 75,
+        "Listening": 50,
+        "Writing": 80
+      },
+      "Advanced": {
+        "Reading": 75,
+        "Listening": 60,
+        "Writing": 90
+      }
+    };
+
+    // ----------------------
+    // Analogue Clock Functionality (Regular Mode)
+    // ----------------------
+    function updateAnalogue() {
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const minutes = now.getMinutes();
+      const hours = now.getHours() % 12;
+      
+      const secondDeg = seconds * 6;                // 6° per second
+      const minuteDeg = minutes * 6 + seconds * 0.1;  // 6° per minute with adjustment
+      const hourDeg = hours * 30 + minutes * 0.5;     // 30° per hour with adjustment
+      
+      document.getElementById('second').style.transform = `translate(-50%, -100%) rotate(${secondDeg}deg)`;
+      document.getElementById('minute').style.transform = `translate(-50%, -100%) rotate(${minuteDeg}deg)`;
+      document.getElementById('hour').style.transform = `translate(-50%, -100%) rotate(${hourDeg}deg)`;
+    }
+    
+    // ----------------------
+    // Digital Clock Functionality
+    // ----------------------
+    function updateDigital() {
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      let seconds = now.getSeconds();
+      
+      hours = hours < 10 ? '0' + hours : hours;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      seconds = seconds < 10 ? '0' + seconds : seconds;
+      
+      document.getElementById('digital').textContent = `${hours}:${minutes}:${seconds}`;
+    }
+    
+    // ----------------------
+    // Stopwatch Functionality
+    // ----------------------
+    let stopwatchInterval = null;
+    let stopwatchStartTime = null;
+    let stopwatchElapsed = 0; // in milliseconds
+    let stopwatchRunning = false;
+    
+    function updateStopwatchDisplay() {
+      const display = document.getElementById('stopwatch-display');
+      let elapsed = stopwatchElapsed;
+      if (stopwatchRunning) {
+        elapsed += Date.now() - stopwatchStartTime;
+      }
+      
+      const minutes = Math.floor(elapsed / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      const ms = Math.floor((elapsed % 1000) / 10); // two-digit ms
+      
+      const mStr = minutes < 10 ? '0' + minutes : minutes;
+      const sStr = seconds < 10 ? '0' + seconds : seconds;
+      const msStr = ms.toString().padStart(2, '0');
+      
+      display.textContent = `${mStr}:${sStr}:${msStr}`;
+    }
+    
+    function startStopwatch() {
+      if (!stopwatchRunning) {
+        stopwatchRunning = true;
+        stopwatchStartTime = Date.now();
+        document.getElementById('stopwatch-start').textContent = 'Pause';
+        stopwatchInterval = setInterval(updateStopwatchDisplay, 10);
+      } else {
+        stopwatchRunning = false;
+        stopwatchElapsed += Date.now() - stopwatchStartTime;
+        document.getElementById('stopwatch-start').textContent = 'Start';
+        clearInterval(stopwatchInterval);
+      }
+    }
+    
+    function resetStopwatch() {
+      stopwatchRunning = false;
+      clearInterval(stopwatchInterval);
+      stopwatchElapsed = 0;
+      document.getElementById('stopwatch-display').textContent = '00:00:00';
+      document.getElementById('stopwatch-start').textContent = 'Start';
+    }
+    
+    // ----------------------
+    // Countdown Timer Functionality (HH:MM:SS format)
+    // ----------------------
+    let countdownInterval = null;
+    let countdownRemaining = 0; // in milliseconds
+    let countdownRunning = false;
+    let lastCountdownTime = 0; // to store the last set time
+    let flashInterval = null;  // for flashing when reaching 0
+    
+    function updateCountdownDisplay() {
+      const display = document.getElementById('countdown-display');
+      let remaining = countdownRemaining;
+      if (remaining < 0) remaining = 0;
+      const hours = Math.floor(remaining / 3600000);
+      const remainder = remaining % 3600000;
+      const minutes = Math.floor(remainder / 60000);
+      const seconds = Math.floor((remainder % 60000) / 1000);
+      
+      const hStr = hours < 10 ? '0' + hours : hours;
+      const mStr = minutes < 10 ? '0' + minutes : minutes;
+      const sStr = seconds < 10 ? '0' + seconds : seconds;
+      
+      display.textContent = `${hStr}:${mStr}:${sStr}`;
+    }
+    
+    // Accepts HH:MM:SS or MM:SS (assumes 0 hours)
+    function parseCountdownTime(text) {
+      const parts = text.trim().split(':');
+      if (parts.length === 2) {
+        const minutes = parseInt(parts[0], 10);
+        const seconds = parseInt(parts[1], 10);
+        if (isNaN(minutes) || isNaN(seconds)) return null;
+        return (minutes * 60 + seconds) * 1000;
+      } else if (parts.length === 3) {
+        const hours = parseInt(parts[0], 10);
+        const minutes = parseInt(parts[1], 10);
+        const seconds = parseInt(parts[2], 10);
+        if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) return null;
+        return (hours * 3600 + minutes * 60 + seconds) * 1000;
+      } else {
+        return null;
+      }
+    }
+    
+    function startPauseCountdown() {
+      if (!countdownRunning) {
+        if (countdownRemaining <= 0) {
+          const inputText = document.getElementById('countdown-display').textContent;
+          const parsed = parseCountdownTime(inputText);
+          if (parsed === null || parsed <= 0) {
+            alert("Please enter a valid time in HH:MM:SS or MM:SS format.");
+            return;
+          }
+          countdownRemaining = parsed;
+          lastCountdownTime = parsed; // store the last set time
+        }
+        countdownRunning = true;
+        document.getElementById('countdown-start').textContent = 'Pause';
+        document.getElementById('countdown-display').setAttribute('contenteditable', 'false');
+        let previousTime = Date.now();
+        countdownInterval = setInterval(() => {
+          const now = Date.now();
+          const elapsed = now - previousTime;
+          previousTime = now;
+          countdownRemaining -= elapsed;
+          updateCountdownDisplay();
+          if (countdownRemaining <= 0) {
+            clearInterval(countdownInterval);
+            countdownRunning = false;
+            document.getElementById('countdown-start').textContent = 'Start';
+            countdownRemaining = 0;
+            updateCountdownDisplay();
+            if(countdownSoundOn){
+              document.getElementById('countdown-sound').play();
+            }
+            // Start flashing the display
+            flashCountdown();
+          }
+        }, 50);
+      } else {
+        // Stop countdown (and flashing if active)
+        countdownRunning = false;
+        document.getElementById('countdown-start').textContent = 'Start';
+        clearInterval(countdownInterval);
+        clearInterval(flashInterval);
+        document.getElementById('countdown-display').style.visibility = 'visible';
+        document.getElementById('countdown-display').setAttribute('contenteditable', 'true');
+      }
+    }
+    
+    // Flash the countdown display when time reaches 0
+    function flashCountdown() {
+      clearInterval(flashInterval);
+      flashInterval = setInterval(() => {
+        const display = document.getElementById('countdown-display');
+        display.style.visibility = (display.style.visibility === 'hidden') ? 'visible' : 'hidden';
+      }, 200); // toggle visibility every 200ms
+    }
+    
+    function resetCountdown() {
+      // Stop any flashing
+      clearInterval(flashInterval);
+      document.getElementById('countdown-display').style.visibility = 'visible';
+      countdownRunning = false;
+      clearInterval(countdownInterval);
+      // Reset to the last set time (if available) or 0 if none
+      countdownRemaining = lastCountdownTime || 0;
+      document.getElementById('countdown-start').textContent = 'Start';
+      updateCountdownDisplay();
+      document.getElementById('countdown-display').setAttribute('contenteditable', 'true');
+    }
+    
+    // ----------------------
+    // Exam Clock Functionality
+    // ----------------------
+    function updateExamClock() {
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const minutes = now.getMinutes();
+      const hours = now.getHours() % 12;
+      
+      const secondDeg = seconds * 6;
+      const minuteDeg = minutes * 6 + seconds * 0.1;
+      const hourDeg = hours * 30 + minutes * 0.5;
+      
+      document.getElementById('exam-second').style.transform = `translate(-50%, -100%) rotate(${secondDeg}deg)`;
+      document.getElementById('exam-minute').style.transform = `translate(-50%, -100%) rotate(${minuteDeg}deg)`;
+      document.getElementById('exam-hour').style.transform = `translate(-50%, -100%) rotate(${hourDeg}deg)`;
+    }
+    
+    // ----------------------
+    // Exam Options Functionality (Level, Exam, Time, Start, Finish)
+    // ----------------------
+    function updateExamOptions() {
+      const level = document.getElementById('exam-level').value;
+      const exam = document.getElementById('exam-type').value;
+      const startTimeStr = document.getElementById('exam-start').value.trim();
+      
+      // 1. Get duration from the lookup
+      const duration = examDurations[level][exam] || 0;
+      // 2. Update Time display
+      document.getElementById('exam-time').textContent = duration;
+      
+      // 3. Parse start time
+      let finishStr = '--';
+      // Simple regex to check for HH:MM format
+      if (/^\d{1,2}:\d{2}$/.test(startTimeStr)) {
+        const [hh, mm] = startTimeStr.split(':').map(n => parseInt(n, 10));
+        if (hh >= 0 && hh < 24 && mm >= 0 && mm < 60) {
+          // 4. Calculate finish time
+          const startInMinutes = hh * 60 + mm;
+          const finishInMinutes = startInMinutes + duration;
+          const finishH = Math.floor(finishInMinutes / 60) % 24;
+          const finishM = finishInMinutes % 60;
+          const finishHStr = finishH < 10 ? '0' + finishH : finishH;
+          const finishMStr = finishM < 10 ? '0' + finishM : finishM;
+          finishStr = `${finishHStr}:${finishMStr}`;
+        }
+      }
+      // 5. Update Finish field
+      document.getElementById('exam-finish').textContent = finishStr;
+    }
+    
+    // ----------------------
+    // Center Circle Positioning (Regular Analogue Mode)
+    // ----------------------
+    function updateCenterPosition() {
+      const clockContainer = document.getElementById('clock-container');
+      const centerCircle = document.getElementById('center');
+      const rect = clockContainer.getBoundingClientRect();
+      
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      const dpr = window.devicePixelRatio || 1;
+      
+      centerCircle.style.left = centerX + 'px';
+      centerCircle.style.top = centerY + 'px';
+      centerCircle.style.transform = `translate(-50%, -50%) scale(${1 / dpr})`;
+    }
+    
+    // ----------------------
+    // Mode Toggle
+    // ----------------------
+    function setMode(mode) {
+      // Hide all modes
+      document.getElementById('analogue').style.display = 'none';
+      document.getElementById('digital').style.display = 'none';
+      document.getElementById('stopwatch').style.display = 'none';
+      document.getElementById('countdown').style.display = 'none';
+      document.getElementById('exam').style.display = 'none';
+      
+      // Show center only for analogue (regular mode)
+      if (mode === 'analogue') {
+        document.getElementById('center').style.display = 'block';
+        document.getElementById('analogue').style.display = 'block';
+      } else {
+        document.getElementById('center').style.display = 'none';
+      }
+      
+      if (mode === 'digital') {
+        document.getElementById('digital').style.display = 'flex';
+      }
+      
+      if (mode === 'stopwatch') {
+        document.getElementById('stopwatch').style.display = 'flex';
+      }
+      
+      if (mode === 'countdown') {
+        document.getElementById('countdown').style.display = 'flex';
+        document.getElementById('countdown-display').setAttribute('contenteditable', countdownRunning ? 'false' : 'true');
+      }
+      
+      if (mode === 'exam') {
+        document.getElementById('exam').style.display = 'flex';
+      }
+    }
+    
+    // ----------------------
+    // Initialization & Intervals
+    // ----------------------
+    // Call each clock’s update function initially
+    updateAnalogue();
+    updateDigital();
+    updateCenterPosition();
+    updateExamClock();
+    
+    // Then update them periodically
+    setInterval(() => {
+      updateAnalogue();
+      updateDigital();
+      updateExamClock();
+    }, 1000);
+    
+    // ----------------------
+    // Event Listeners
+    // ----------------------
+    // Switch modes based on dropdown
+    document.getElementById('clock-selector').addEventListener('change', function() {
+      const value = this.value;
+      setMode(value);
+    });
+    
+    // Keep center circle in place if the window is resized
+    window.addEventListener('resize', updateCenterPosition);
+    
+    // Stopwatch
+    document.getElementById('stopwatch-start').addEventListener('click', startStopwatch);
+    document.getElementById('stopwatch-reset').addEventListener('click', resetStopwatch);
+    
+    // Countdown
+    document.getElementById('countdown-start').addEventListener('click', startPauseCountdown);
+    document.getElementById('countdown-reset').addEventListener('click', resetCountdown);
+    
+    // Exam Options
+    document.getElementById('exam-level').addEventListener('change', updateExamOptions);
+    document.getElementById('exam-type').addEventListener('change', updateExamOptions);
+    document.getElementById('exam-start').addEventListener('input', updateExamOptions);
+    
+    // Set default mode based on drop-down value
+    setMode(document.getElementById('clock-selector').value);
+  </script>
+</body>
+</html>
